@@ -24,7 +24,7 @@ mkdir -p "${RESOURCES_DIR}"
 # Copy executable
 cp "${BUILD_DIR}/${EXECUTABLE_NAME}" "${MACOS_DIR}/"
 
-# Copy SPM resource bundle (contains Localizable.strings etc.)
+# Copy SPM resource bundle next to executable
 RESOURCE_BUNDLE="${BUILD_DIR}/EdgeTap_EdgeTapApp.bundle"
 if [ -d "${RESOURCE_BUNDLE}" ]; then
     cp -r "${RESOURCE_BUNDLE}" "${MACOS_DIR}/"
@@ -65,6 +65,7 @@ cat > "${CONTENTS_DIR}/Info.plist" <<EOF
 EOF
 
 echo "🖋️ Codesigning..."
+codesign --force --deep --sign - "${MACOS_DIR}/EdgeTap_EdgeTapApp.bundle" 2>/dev/null || true
 codesign --force --deep --sign - "${APP_DIR}"
 
 echo "✅ Build Complete: ./${APP_DIR}"
