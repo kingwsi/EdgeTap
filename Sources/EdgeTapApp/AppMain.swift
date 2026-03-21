@@ -2,11 +2,15 @@ import AppKit
 
 @main
 enum EdgeTapAppMain {
+    @MainActor static var appDelegate: AppDelegate?
+
+    @MainActor
     static func main() {
         let application = NSApplication.shared
         application.setActivationPolicy(.accessory)
-        let delegate = AppDelegate()
-        application.delegate = delegate
-        _ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
+        appDelegate = AppDelegate()
+        application.delegate = appDelegate
+        application.run()
     }
 }
+
