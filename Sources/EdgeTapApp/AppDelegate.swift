@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var settingsWindowController = SettingsWindowController(settings: settings)
 
     private var isMonitoring = false
+    private var activity: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusBarController.install()
@@ -54,6 +55,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings.monitoringEnabled = false
             settingsWindowController.onSettingsChanged?(settings)
         } else {
+            if activity == nil {
+                activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .latencyCritical], reason: "EdgeTap Continuous Multitouch Observation")
+            }
             print("[EdgeTap] Monitoring started")
         }
     }
@@ -62,6 +66,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         multitouchManager.stop()
         gestureEngine.reset()
         isMonitoring = false
+        if let activity {
+            ProcessInfo.processInfo.endActivity(activity)
+            self.activity = nil
+        }
         print("[EdgeTap] Monitoring stopped")
     }
 
