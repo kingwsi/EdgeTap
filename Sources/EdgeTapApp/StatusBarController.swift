@@ -10,8 +10,9 @@ final class StatusBarController {
     private let quitItem = NSMenuItem(title: Localization.get("MENU_QUIT"), action: #selector(quitApp), keyEquivalent: "q")
 
     func install() {
-        let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.title = Localization.get("STATUS_BAR_TITLE")
+        let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.button?.image = makeMenuBarIcon()
+        statusItem.button?.imageScaling = .scaleProportionallyDown
 
         let menu = NSMenu()
         settingsItem.target = self
@@ -25,9 +26,42 @@ final class StatusBarController {
     }
 
     func refreshMenu() {
-        statusItem?.button?.title = Localization.get("STATUS_BAR_TITLE")
         settingsItem.title = Localization.get("MENU_SETTINGS")
         quitItem.title = Localization.get("MENU_QUIT")
+    }
+
+    private func makeMenuBarIcon() -> NSImage {
+        let size: CGFloat = 18
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            let pad = NSRect(x: 2, y: 3, width: 14, height: 12)
+            let padPath = NSBezierPath(roundedRect: pad, xRadius: 2.5, yRadius: 2.5)
+            padPath.lineWidth = 1.2
+            NSColor.black.setStroke()
+            padPath.stroke()
+
+            // Left edge highlight
+            let leftEdge = NSBezierPath()
+            leftEdge.move(to: NSPoint(x: 2, y: 5.5))
+            leftEdge.line(to: NSPoint(x: 2, y: 12.5))
+            leftEdge.lineWidth = 2.0
+            leftEdge.lineCapStyle = .round
+            NSColor.black.setStroke()
+            leftEdge.stroke()
+
+            // Bottom edge highlight
+            let bottomEdge = NSBezierPath()
+            bottomEdge.move(to: NSPoint(x: 4.5, y: 3))
+            bottomEdge.line(to: NSPoint(x: 13.5, y: 3))
+            bottomEdge.lineWidth = 2.0
+            bottomEdge.lineCapStyle = .round
+            NSColor.black.setStroke()
+            bottomEdge.stroke()
+
+            return true
+        }
+
+        image.isTemplate = true
+        return image
     }
 
     @objc

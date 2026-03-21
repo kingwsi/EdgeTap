@@ -6,7 +6,8 @@ EXECUTABLE_NAME="EdgeTapApp"
 BUNDLE_ID="com.edgetap.mac"
 VERSION="1.0.0"
 
-BUILD_DIR=".build/release"
+ARCH=$(uname -m)
+BUILD_DIR=".build/${ARCH}-apple-macosx/release"
 APP_DIR="${APP_NAME}.app"
 CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
@@ -23,9 +24,16 @@ mkdir -p "${RESOURCES_DIR}"
 # Copy executable
 cp "${BUILD_DIR}/${EXECUTABLE_NAME}" "${MACOS_DIR}/"
 
-# Copy resources (Localizable strings)
-if [ -d "Sources/EdgeTapApp/Resources" ]; then
-    cp -r Sources/EdgeTapApp/Resources/* "${RESOURCES_DIR}/"
+# Copy SPM resource bundle (contains Localizable.strings etc.)
+RESOURCE_BUNDLE="${BUILD_DIR}/EdgeTap_EdgeTapApp.bundle"
+if [ -d "${RESOURCE_BUNDLE}" ]; then
+    cp -r "${RESOURCE_BUNDLE}" "${MACOS_DIR}/"
+    echo "📋 Copied resource bundle"
+fi
+
+# Copy icon
+if [ -f "Sources/EdgeTapApp/Resources/AppIcon.icns" ]; then
+    cp "Sources/EdgeTapApp/Resources/AppIcon.icns" "${RESOURCES_DIR}/"
 fi
 
 # Create Info.plist
