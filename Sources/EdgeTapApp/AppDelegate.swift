@@ -36,16 +36,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startMonitoring() {
         let result = multitouchManager.start { [weak self] contacts, timestamp in
-            Task { @MainActor [weak self] in
-                guard let self else {
-                    return
-                }
+            guard let self else { return }
 
+            // 1. Process gestures immediately and synchronously to avoid queueing
+            self.gestureEngine.process(contacts: contacts, timestamp: timestamp)
+
+            // 2. ONLY push UI updates to the MainActor
+            Task { @MainActor in
                 self.settingsWindowController.updateTouches(contacts)
-
-
-
-                self.gestureEngine.process(contacts: contacts, timestamp: timestamp)
             }
         }
 

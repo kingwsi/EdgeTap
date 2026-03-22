@@ -257,30 +257,36 @@ public struct EdgeSwipeDetector: Sendable {
     }
 
     private func edge(for contact: TouchContact) -> TrackpadEdge? {
-        if contact.x <= configuration.edgeInset {
+        let xInset = configuration.absoluteEdgeThresholdX / 10.0
+        let yInset = xInset * 1.6 // Assume ~1.6:1 aspect ratio for physical consistency
+        
+        if contact.x <= xInset {
             return .left
         }
-        if contact.x >= 1.0 - configuration.edgeInset {
+        if contact.x >= 1.0 - xInset {
             return .right
         }
-        if contact.y <= configuration.edgeInset {
-            return .bottom
+        if contact.y <= yInset {
+            return .bottom // Flipped logic: y=0 is bottom in trackpad coordinates
         }
-        if contact.y >= 1.0 - configuration.edgeInset {
+        if contact.y >= 1.0 - yInset {
             return .top
         }
         return nil
     }
 
     private func corner(for contact: TouchContact) -> TrackpadCorner? {
-        guard contact.x <= configuration.cornerInset || contact.x >= 1.0 - configuration.cornerInset else {
+        let xInset = max(configuration.cornerInset, configuration.absoluteEdgeThresholdX / 10.0)
+        let yInset = xInset * 1.6
+        
+        guard contact.x <= xInset || contact.x >= 1.0 - xInset else {
             return nil
         }
-        guard contact.y <= configuration.cornerInset || contact.y >= 1.0 - configuration.cornerInset else {
+        guard contact.y <= yInset || contact.y >= 1.0 - yInset else {
             return nil
         }
 
-        switch (contact.x <= configuration.cornerInset, contact.y >= 1.0 - configuration.cornerInset) {
+        switch (contact.x <= xInset, contact.y >= 1.0 - yInset) {
         case (true, true):
             return .topLeft
         case (false, true):

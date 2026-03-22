@@ -12,8 +12,8 @@
 "LANG_ZH" = "中文";
 "UI_RESTART_HINT" = "部分更改可能需要重启后才能生效。";
 "SECTION_SENSITIVITY" = "灵敏度";
-"ROW_EDGE_THRESHOLD" = "右边缘 X 阈值";
-"DETAIL_EDGE_THRESHOLD" = "触摸必须在靠近边缘多远的位置开始，EdgeTap 才会将其视为右边缘手势。";
+"ROW_EDGE_THRESHOLD" = "全域边缘检测阈值";
+"DETAIL_EDGE_THRESHOLD" = "定义触摸在距离触控板边缘多少范围内开始会被识别为手势。数值越大，可触发区域越宽。";
 "ROW_TRIGGER_DELTA" = "垂直触发增量";
 "DETAIL_TRIGGER_DELTA" = "在上/下边缘滑动被视为有意操作之前的最小移动距离。";
 "SECTION_LIVE_PREVIEW" = "实时预览";

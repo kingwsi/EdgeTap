@@ -15,7 +15,7 @@ final class SettingsWindowController: NSWindowController {
             private let monitoringEnabledSwitch = NSSwitch()
     private let languagePopUp = NSPopUpButton(frame: .zero, pullsDown: false)
     private let restartLabel = NSTextField(labelWithString: "")
-    private let edgeThresholdSlider = NSSlider(value: 1.45, minValue: 1.20, maxValue: 1.80, target: nil, action: nil)
+    private let edgeThresholdSlider = NSSlider(value: 0.5, minValue: 0.2, maxValue: 1.25, target: nil, action: nil)
     private let triggerDeltaSlider = NSSlider(value: 0.12, minValue: 0.05, maxValue: 0.60, target: nil, action: nil)
     private let edgeThresholdValueLabel = NSTextField(labelWithString: "")
     private let triggerDeltaValueLabel = NSTextField(labelWithString: "")
@@ -177,26 +177,26 @@ final class SettingsWindowController: NSWindowController {
         )
         rootStack.addArrangedSubview(sensitivitySection)
 
-        // ── Live Preview section (freeform — visualizer has its own background) ──
-        let previewSection = makeFreeformSection(
-            header: Localization.get("SECTION_LIVE_PREVIEW"),
-            content: makeVisualizerContent()
-        )
-        rootStack.addArrangedSubview(previewSection)
-
         // ── Shortcut Mappings section (freeform — editor has its own card) ──
         let shortcutsSection = makeFreeformSection(
             header: Localization.get("SECTION_SHORTCUT_MAPPINGS"),
             content: makeShortcutMappingsContent()
         )
         rootStack.addArrangedSubview(shortcutsSection)
+
+        // ── Live Preview section (freeform — visualizer has its own background) ──
+        let previewSection = makeFreeformSection(
+            header: Localization.get("SECTION_LIVE_PREVIEW"),
+            content: makeVisualizerContent()
+        )
+        rootStack.addArrangedSubview(previewSection)
         
         NSLayoutConstraint.activate([
             behaviorSection.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             permissionsSection.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             sensitivitySection.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
-            previewSection.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             shortcutsSection.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
+            previewSection.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
         ])
 
         // ── Wire actions ──
@@ -395,7 +395,7 @@ final class SettingsWindowController: NSWindowController {
     /// Touch visualizer + status label, displayed without a card wrapper.
     private func makeVisualizerContent() -> NSView {
         visualizerView.translatesAutoresizingMaskIntoConstraints = false
-        visualizerView.heightAnchor.constraint(equalToConstant: 220).isActive = true
+        visualizerView.heightAnchor.constraint(equalToConstant: 338).isActive = true
 
         liveTouchLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
         liveTouchLabel.textColor = .tertiaryLabelColor
@@ -447,6 +447,8 @@ final class SettingsWindowController: NSWindowController {
                         monitoringEnabledSwitch.state = settings.monitoringEnabled ? .on : .off
         edgeThresholdSlider.doubleValue = settings.absoluteEdgeThresholdX
         triggerDeltaSlider.doubleValue = settings.triggerDeltaY
+        visualizerView.edgeThreshold = settings.absoluteEdgeThresholdX
+        visualizerView.triggerDelta = settings.triggerDeltaY
         refreshLabels()
         shortcutMappingsEditorView.apply(mappings: settings.gestureShortcutMappings, edgeActionTypes: settings.edgeActionTypes)
         setupLanguageMenu()
@@ -528,6 +530,7 @@ final class SettingsWindowController: NSWindowController {
     @objc
     private func updateEdgeThreshold() {
         settings.absoluteEdgeThresholdX = edgeThresholdSlider.doubleValue
+        visualizerView.edgeThreshold = edgeThresholdSlider.doubleValue
         refreshLabels()
         onSettingsChanged?(settings)
     }
@@ -535,6 +538,7 @@ final class SettingsWindowController: NSWindowController {
     @objc
     private func updateTriggerDelta() {
         settings.triggerDeltaY = triggerDeltaSlider.doubleValue
+        visualizerView.triggerDelta = triggerDeltaSlider.doubleValue
         refreshLabels()
         onSettingsChanged?(settings)
     }
@@ -571,6 +575,10 @@ final class SettingsWindowController: NSWindowController {
             guard let self else { return }
             self.settings.edgeActionTypes[edge] = type
             self.onSettingsChanged?(self.settings)
+        }
+
+        shortcutMappingsEditorView.onSectionChanged = { [weak self] index in
+            self?.visualizerView.activeSection = index
         }
     }
     

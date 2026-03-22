@@ -39,6 +39,7 @@ final class DemoActionExecutor {
             let mediaAction: MediaAction = isVolumeUp ? .volumeUp : .volumeDown
             if shortcutExecutor.performMediaAction(mediaAction) {
                 print("[EdgeTap] continuous volume \(mediaAction.displayName)")
+                ToastManager.shared.show(message: mediaAction.displayName)
             }
             return
         }
@@ -51,6 +52,7 @@ final class DemoActionExecutor {
             if shortcutExecutor.performMediaAction(binding.mediaAction) {
                 print("[EdgeTap] media action executed \(binding.mediaAction.displayName)")
                 appendLogLine("Executed media action \(binding.mediaAction.displayName)")
+                ToastManager.shared.show(message: binding.mediaAction.displayName)
             } else {
                 print("[EdgeTap] media action failed \(binding.mediaAction.displayName)")
                 appendLogLine("Failed to execute media action \(binding.mediaAction.displayName)")
@@ -65,6 +67,7 @@ final class DemoActionExecutor {
         if shortcutExecutor.perform(shortcut) {
             print("[EdgeTap] shortcut executed \(shortcut.displayString)")
             appendLogLine("Executed shortcut \(shortcut.displayString)")
+            ToastManager.shared.show(message: shortcut.displayString)
         } else {
             print("[EdgeTap] shortcut failed \(shortcut.displayString)")
             appendLogLine("Failed to execute shortcut \(shortcut.displayString)")

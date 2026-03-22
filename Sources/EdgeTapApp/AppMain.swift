@@ -10,7 +10,7 @@ enum EdgeTapAppMain {
         application.setActivationPolicy(.accessory)
         appDelegate = AppDelegate()
         application.delegate = appDelegate
-        application.run()
+        _ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
     }
 }
 

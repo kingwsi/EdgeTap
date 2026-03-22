@@ -25,12 +25,127 @@ final class TouchVisualizerView: NSView {
         true
     }
 
+    var activeSection: Int = 0 {
+        didSet {
+            needsDisplay = true
+        }
+    }
+
+    var edgeThreshold: Double = 1.45 {
+        didSet {
+            needsDisplay = true
+        }
+    }
+
+    var triggerDelta: Double = 0.12 {
+        didSet {
+            needsDisplay = true
+        }
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
         drawBackground()
+        drawActiveZones()
         drawGrid()
         drawTouches()
+    }
+
+    private func drawActiveZones() {
+        let highlightColor = NSColor.controlAccentColor.withAlphaComponent(0.3)
+        let strokeColor = NSColor.controlAccentColor
+        
+        let xInset = CGFloat(edgeThreshold / 10.0)
+        let yInset = xInset * 1.6 // Assume ~1.6:1 aspect ratio for physical consistency
+        let cornerX = xInset
+        let cornerY = yInset
+        
+        let visualWidth = bounds.width
+        let visualHeight = bounds.height
+        
+        // --- Draw overall "Active Sensitivity Zone" (the thin border that counts as an edge) ---
+        let zoneOverlayPath = NSBezierPath()
+        
+        // Left
+        zoneOverlayPath.append(NSBezierPath(rect: CGRect(x: 0, y: 0, width: xInset * visualWidth, height: visualHeight)))
+        // Right
+        zoneOverlayPath.append(NSBezierPath(rect: CGRect(x: visualWidth * (1.0 - xInset), y: 0, width: xInset * visualWidth, height: visualHeight)))
+        // Top
+        zoneOverlayPath.append(NSBezierPath(rect: CGRect(x: 0, y: 0, width: visualWidth, height: yInset * visualHeight)))
+        // Bottom
+        zoneOverlayPath.append(NSBezierPath(rect: CGRect(x: 0, y: visualHeight * (1.0 - yInset), width: visualWidth, height: yInset * visualHeight)))
+        
+        NSColor.controlAccentColor.withAlphaComponent(0.08).setFill()
+        zoneOverlayPath.fill()
+
+        // --- Highlight the currently selected section ---
+        var highlightPaths: [NSBezierPath] = []
+        
+        switch activeSection {
+        case 0: // Top
+            let rect = CGRect(x: 0, y: 0, width: visualWidth, height: yInset * visualHeight)
+            highlightPaths.append(NSBezierPath(rect: rect))
+        case 1: // Bottom
+            let rect = CGRect(x: 0, y: visualHeight * (1.0 - yInset), width: visualWidth, height: yInset * visualHeight)
+            highlightPaths.append(NSBezierPath(rect: rect))
+        case 2: // Left
+            let rect = CGRect(x: 0, y: 0, width: xInset * visualWidth, height: visualHeight)
+            highlightPaths.append(NSBezierPath(rect: rect))
+        case 3: // Right
+            let rect = CGRect(x: visualWidth * (1.0 - xInset), y: 0, width: xInset * visualWidth, height: visualHeight)
+            highlightPaths.append(NSBezierPath(rect: rect))
+        case 4: // Corners
+            highlightPaths.append(NSBezierPath(rect: CGRect(x: 0, y: 0, width: cornerX * visualWidth, height: cornerY * visualHeight))) // Top-Left
+            highlightPaths.append(NSBezierPath(rect: CGRect(x: visualWidth * (1.0 - cornerX), y: 0, width: cornerX * visualWidth, height: cornerY * visualHeight))) // Top-Right
+            highlightPaths.append(NSBezierPath(rect: CGRect(x: 0, y: visualHeight * (1.0 - cornerY), width: cornerX * visualWidth, height: cornerY * visualHeight))) // Bottom-Left
+            highlightPaths.append(NSBezierPath(rect: CGRect(x: visualWidth * (1.0 - cornerX), y: visualHeight * (1.0 - cornerY), width: cornerX * visualWidth, height: cornerY * visualHeight))) // Bottom-Right
+        default:
+            break
+        }
+
+        for path in highlightPaths {
+            highlightColor.setFill()
+            path.fill()
+            strokeColor.setStroke()
+            path.lineWidth = 1.5
+            path.stroke()
+        }
+        
+        // --- Draw Trigger Delta (movement threshold indicators) ---
+        drawTriggerDeltaIndicators(xInset: xInset, yInset: yInset)
+    }
+
+    private func drawTriggerDeltaIndicators(xInset: CGFloat, yInset: CGFloat) {
+        let visualWidth = bounds.width
+        let visualHeight = bounds.height
+        let delta = CGFloat(triggerDelta)
+        let deltaColor = NSColor.systemOrange.withAlphaComponent(0.4)
+        
+        // Draw some dashed lines to show how far you have to slide
+        let dashPath = NSBezierPath()
+        dashPath.setLineDash([4, 4], count: 2, phase: 0)
+        dashPath.lineWidth = 1
+        
+        if activeSection == 2 || activeSection == 3 { // Left or Right edges (vertical swipes)
+            // Show horizontal bands for vertical travel required
+            let startY: CGFloat = visualHeight * 0.2 // arbitrary center-ish point
+            dashPath.move(to: CGPoint(x: 0, y: startY))
+            dashPath.line(to: CGPoint(x: visualWidth, y: startY))
+            
+            dashPath.move(to: CGPoint(x: 0, y: startY + delta * visualHeight))
+            dashPath.line(to: CGPoint(x: visualWidth, y: startY + delta * visualHeight))
+        } else if activeSection == 0 || activeSection == 1 { // Top or Bottom edges (horizontal swipes)
+            let startX: CGFloat = visualWidth * 0.2
+            dashPath.move(to: CGPoint(x: startX, y: 0))
+            dashPath.line(to: CGPoint(x: startX, y: visualHeight))
+            
+            dashPath.move(to: CGPoint(x: startX + delta * visualWidth, y: 0))
+            dashPath.line(to: CGPoint(x: startX + delta * visualWidth, y: visualHeight))
+        }
+        
+        deltaColor.setStroke()
+        dashPath.stroke()
     }
 
     private func drawBackground() {
@@ -41,14 +156,6 @@ final class TouchVisualizerView: NSView {
             NSColor.controlBackgroundColor.blended(withFraction: 0.12, of: .black) ?? .controlBackgroundColor,
         ])
         gradient?.draw(in: fillPath, angle: 90)
-
-        let captureZoneRect = CGRect(x: bounds.width * (2.0 / 3.0), y: 0, width: bounds.width / 3.0, height: bounds.height)
-        let captureZonePath = NSBezierPath(rect: captureZoneRect)
-        NSColor.controlAccentColor.withAlphaComponent(0.08).setFill()
-        captureZonePath.fill()
-
-        NSColor.white.withAlphaComponent(0.04).setFill()
-        NSBezierPath(rect: CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height * 0.32)).fill()
 
         NSColor.separatorColor.withAlphaComponent(0.9).setStroke()
         fillPath.lineWidth = 1

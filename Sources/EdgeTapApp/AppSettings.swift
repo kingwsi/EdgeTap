@@ -51,7 +51,7 @@ final class AppSettings {
             defaults.set(false, forKey: Keys.monitoringEnabled)
         }
         if defaults.object(forKey: Keys.absoluteEdgeThresholdX) == nil {
-            defaults.set(1.45, forKey: Keys.absoluteEdgeThresholdX)
+            defaults.set(0.5, forKey: Keys.absoluteEdgeThresholdX)
         }
         if defaults.object(forKey: Keys.triggerDeltaY) == nil {
             defaults.set(0.12, forKey: Keys.triggerDeltaY)

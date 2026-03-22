@@ -2,39 +2,13 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
-private struct NativeSegmentedPickerView: View {
-    let labels: [String]
-    @Binding var externalIndex: Int
-    @State private var localIndex: Int
-
-    init(labels: [String], selectedIndex: Binding<Int>) {
-        self.labels = labels
-        self._externalIndex = selectedIndex
-        self._localIndex = State(initialValue: selectedIndex.wrappedValue)
-    }
-
-    var body: some View {
-        Picker("", selection: $localIndex.animation(.spring(response: 0.3, dampingFraction: 0.8))) {
-            ForEach(0..<labels.count, id: \.self) { index in
-                Text(labels[index]).tag(index)
-            }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .frame(width: 320)
-        .onChange(of: localIndex) { newValue in
-            externalIndex = newValue
-        }
-        .onChange(of: externalIndex) { newValue in
-            localIndex = newValue
-        }
-    }
-}
+// Native AppKit implementation for the segmented control for better stability
 
 @MainActor
 final class GestureShortcutBindingsEditorView: NSView {
         var onMappingChanged: ((GestureShortcutMapping) -> Void)?
     var onEdgeActionTypeChanged: ((String, EdgeActionType) -> Void)?
+    var onSectionChanged: ((Int) -> Void)?
     private var edgeActionTypes: [String: EdgeActionType] = [:]
     private var edgePickers: [NSSegmentedControl: String] = [:]
     private var edgeRowsContainers: [String: NSView] = [:]
@@ -76,7 +50,7 @@ final class GestureShortcutBindingsEditorView: NSView {
     ]
 
     private let rootStackView = NSStackView()
-    private var segmentedHostingView: NSHostingView<AnyView>?
+    private var segmentedControl: NSSegmentedControl?
     private let cardView = NSView()
     private let pagesContainer = NSView()
 
@@ -186,36 +160,34 @@ final class GestureShortcutBindingsEditorView: NSView {
             Localization.get("SEGMENT_CORNERS")
         ]
         
-        let binding = Binding<Int>(
-            get: { [weak self] in self?.selectedSectionIndex ?? 0 },
-            set: { [weak self] newIndex in
-                guard let self = self else { return }
-                guard self.selectedSectionIndex != newIndex else { return }
-                let oldIndex = self.selectedSectionIndex
-                self.selectedSectionIndex = newIndex
-                self.displaySection(at: newIndex, from: oldIndex, animated: true)
-            }
-        )
-        
-        let swiftUIView = NativeSegmentedPickerView(labels: labels, selectedIndex: binding)
-        let hostingView = NSHostingView(rootView: AnyView(swiftUIView))
-        hostingView.translatesAutoresizingMaskIntoConstraints = false
-        self.segmentedHostingView = hostingView
+        let segmentedControl = NSSegmentedControl(labels: labels, trackingMode: .selectOne, target: self, action: #selector(handleSegmentChange(_:)))
+        segmentedControl.selectedSegment = selectedSectionIndex
+        segmentedControl.translatesAutoresizingMaskIntoConstraints = false
+        self.segmentedControl = segmentedControl
 
         let segmentWrapper = NSView()
         segmentWrapper.translatesAutoresizingMaskIntoConstraints = false
-        segmentWrapper.addSubview(hostingView)
+        segmentWrapper.addSubview(segmentedControl)
 
         NSLayoutConstraint.activate([
-            hostingView.centerXAnchor.constraint(equalTo: segmentWrapper.centerXAnchor),
-            hostingView.topAnchor.constraint(equalTo: segmentWrapper.topAnchor, constant: 4),
-            hostingView.bottomAnchor.constraint(equalTo: segmentWrapper.bottomAnchor, constant: -4),
+            segmentedControl.centerXAnchor.constraint(equalTo: segmentWrapper.centerXAnchor),
+            segmentedControl.topAnchor.constraint(equalTo: segmentWrapper.topAnchor, constant: 4),
+            segmentedControl.bottomAnchor.constraint(equalTo: segmentWrapper.bottomAnchor, constant: -4),
         ])
 
         rootStackView.addArrangedSubview(segmentWrapper)
         NSLayoutConstraint.activate([
             segmentWrapper.widthAnchor.constraint(equalTo: rootStackView.widthAnchor)
         ])
+    }
+
+    @objc private func handleSegmentChange(_ sender: NSSegmentedControl) {
+        let newIndex = sender.selectedSegment
+        guard selectedSectionIndex != newIndex else { return }
+        let oldIndex = selectedSectionIndex
+        selectedSectionIndex = newIndex
+        displaySection(at: newIndex, from: oldIndex, animated: true)
+        onSectionChanged?(newIndex)
     }
 
     private func setupCard() {
@@ -299,6 +271,10 @@ final class GestureShortcutBindingsEditorView: NSView {
         for (i, page) in sectionPageViews {
             page.isHidden = (i != index)
             page.alphaValue = 1
+        }
+        
+        if segmentedControl?.selectedSegment != index {
+            segmentedControl?.selectedSegment = index
         }
     }
     
@@ -496,14 +472,12 @@ final class ShortcutRecorderField: NSControl {
         let filteredFlags = event.modifierFlags.intersection([.command, .option, .control, .shift])
 
         if event.keyCode == CGKeyCode(kVK_Delete) || event.keyCode == CGKeyCode(kVK_ForwardDelete) {
-            shortcutValue = ""
-            onShortcutRecorded?("")
-            return
-        }
-
-        guard !filteredFlags.isEmpty else {
-            NSSound.beep()
-            return
+            // Delete key without modifiers clears the shortcut
+            if filteredFlags.isEmpty {
+                shortcutValue = ""
+                onShortcutRecorded?("")
+                return
+            }
         }
 
         guard let capturedShortcut = ShortcutBinding.makeDisplayString(
